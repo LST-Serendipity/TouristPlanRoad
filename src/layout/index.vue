@@ -47,7 +47,6 @@ export default {
   display: flex;
   height: 100vh;
   width: 100%;
-
   .Top {
     flex: 1;
     height: 100%;
@@ -56,6 +55,7 @@ export default {
   }
   .Bottom {
     flex: 15;
+    height: 100%;
   }
 }
 /* mobile或tablet设备 */
@@ -71,6 +71,8 @@ export default {
   }
   .Bottom {
     flex: 15;
+    height: 80%;
+    box-sizing: border-box;
   }
 
 }

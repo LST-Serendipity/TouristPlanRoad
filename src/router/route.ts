@@ -26,7 +26,8 @@ export const ConstRoute=[
         component:()=>import('../views/more/index.vue')
       },
     ]
-  }
+  },
+
 ]
 
 export const anyRoute=[
