@@ -69,14 +69,16 @@ const loadingRoadWfs=async()=>{
     service:'WFS',
     version:'1.0.0',
     request:'GetFeature',
-    typeName:'webgis_1:road_network',
+    typeName:'webgis_1:road_network2',
     outputFormat:'application/json',
     srsName:'EPSG:4326'
   }
   const result=await reqGetRoadList(wfsParmas)
   console.log("result",result);
   try{
-    viewer.dataSources.add(Cesium.GeoJsonDataSource.load(result))
+    viewer.dataSources.add(Cesium.GeoJsonDataSource.load(result,{
+      clampToGround: true,
+    }))
   }catch(err){
     console.log("加载失败",err);
   }

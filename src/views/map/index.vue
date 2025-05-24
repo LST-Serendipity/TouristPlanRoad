@@ -1,12 +1,20 @@
 <template>
-    <div class="map" ref="map"></div>
+
+    <el-card  :style="`display: ${cardDisabled};`" :class="deviceType()=='desktop'?'card card_toolsWindows':'card card_toolsmodile'">
+      <span>路径规划</span>
+      <el-input v-model="pointInfoDrawer.name" size="small" disabled style="margin: 5px 0;"></el-input>
+      <el-button @click="planRoad" size="small">去这里</el-button>
+    </el-card>
+    <div class="map" ref="map">
+    </div>
+
     <!-- 加载道路 -->
     <CesiumRouter v-if="viewer" :viewer="viewer"></CesiumRouter>
     <!-- 加载点 -->
     <CesiumPoint v-if="viewer" :viewer="viewer"></CesiumPoint>
     <!-- 加载3dtileset -->
     <CesiumTileset v-if="viewer" :viewer="viewer"></CesiumTileset>
-    <el-drawer v-model="drawer" title="I am the title" :with-header="false">
+    <!-- <el-drawer v-model="drawer" title="I am the title" :with-header="false">
        <template #header>
         <span>景点信息</span>
        </template>
@@ -16,7 +24,7 @@
         </div>
         <el-button @click="planRoad">去这里</el-button>
        </template>
-    </el-drawer>
+    </el-drawer> -->
 
 </template>
 
@@ -31,6 +39,8 @@ import type {planRoadParmas} from '@/api/LineInfo/type'
 import CesiumRouter from './road/index.vue'
 import CesiumPoint from './point/index.vue'
 import CesiumTileset from './3dTileset/index.vue'
+
+import {deviceType} from '@/utils/calType'
 
 
 // 类型定义
@@ -65,8 +75,10 @@ let pointInfoDrawer=ref<{
   coordinates:null
 
 })
-
+//储存道路规划信息
 let planRoadLayer=ref()
+//地图路径规划卡片
+const cardDisabled=ref<string>('none')
 
 // 初始化cesium的viewer
 const initViewer=()=>{
@@ -77,9 +89,15 @@ const initViewer=()=>{
     // 关闭cesium的动画和时间轴
     animation: false,
     timeline: false,
-    // terrain:Terrain.fromWorldTerrain(),
+    geocoder:false,
+    homeButton:false,
+    navigationHelpButton:false,
+    sceneModePicker:false,
 
-  })
+    terrain:Terrain.fromWorldTerrain(),
+
+  }),
+  (viewer.value.cesiumWidget.creditContainer as any).style.display='none'
 }
 //配置天地图矢量图层
 const tdtVecLayer=new Cesium.WebMapTileServiceImageryProvider({
@@ -91,7 +109,7 @@ const tdtVecLayer=new Cesium.WebMapTileServiceImageryProvider({
   subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // 负载均衡子域
   maximumLevel: 18, // 最大缩放级别
   tilingScheme: new Cesium.WebMercatorTilingScheme(),
-  credit: new Cesium.Credit("天地图矢量底图")
+
 })
 //配置天地图注记图层
 const tdtCvaLayer=new Cesium.WebMapTileServiceImageryProvider({
@@ -103,7 +121,7 @@ const tdtCvaLayer=new Cesium.WebMapTileServiceImageryProvider({
   subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // 负载均衡子域
   maximumLevel: 18, // 最大缩放级别
   tilingScheme: new Cesium.WebMercatorTilingScheme(),
-  credit: new Cesium.Credit("天地图注记图")
+
 })
 //设置模型要素的鼠标左键点击事件
 const setupClickHandler=()=>{
@@ -115,20 +133,30 @@ const setupClickHandler=()=>{
   const handler=new Cesium.ScreenSpaceEventHandler(viewer.value.scene.canvas)
 
   handler.setInputAction(async (click: Cesium.ScreenSpaceEventHandler.PositionedEvent)=>{
+    //路径规划卡片隐藏
+    cardDisabled.value='none'
     const pickedFeature=(viewer.value as Cesium.Viewer).scene.pick(click.position)
     console.log("pickedFeature",pickedFeature);
     if(pickedFeature.id instanceof Cesium.Entity){
-      if(pickedFeature.id.name){
+      console.log(pickedFeature.id.position);
+      console.log(pickedFeature.id.polyline);
+      //判断点击要素为景区点要素
+      if(pickedFeature.id.position){
+        //路径规划卡片显示
+        cardDisabled.value='block'
         console.log(pickedFeature.id.position._value);
+        //转换笛卡尔坐标为弧度
         const Car3degree=Cesium.Cartographic.fromCartesian(pickedFeature.id.position._value)
         console.log(Car3degree);
+        //转换弧度为经纬度
         const lon=Cesium.Math.toDegrees(Car3degree.longitude)
         const lat=Cesium.Math.toDegrees(Car3degree.latitude)
+        //储存经纬度
         pointInfoDrawer.value.coordinates=[lon,lat]
         drawer.value=true
+        //储存点击要素的name值
         pointInfoDrawer.value.name=pickedFeature.id.name
 
-        // pointInfoDrawer.value.coordinates=pickedFeature.id.
       }
     }
     // 判断是否为 Cesium3DTileFeature
@@ -299,11 +327,17 @@ const planRoad=async()=>{
       }
       console.log(result.data.planRoadGeoJSON);
       try{
+        //加载获得的geojson数据
         planRoadLayer.value=await viewer.value?.dataSources.add(Cesium.GeoJsonDataSource.load(result.data.planRoadGeoJSON,{
           stroke:Cesium.Color.RED,
-          strokeWidth:10
-        }))
+          strokeWidth:10,
+          clampToGround:true,
 
+        }))
+        viewer.value?.camera.flyTo({
+          destination:Cesium.Cartesian3.fromDegrees(params.startLon,params.endLat,500),
+
+        })
 
         console.log("已规划路线");
 
@@ -322,6 +356,7 @@ const planRoad=async()=>{
 //组件挂载后加载地图
 onMounted(async()=>{
   initViewer();
+
   (viewer.value as Cesium.Viewer).scene.debugShowFramesPerSecond = true; // 显示 FPS
   (viewer.value as Cesium.Viewer).scene.postProcessStages.fxaa.enabled = false; // 开启抗锯齿
   // viewer.value.scene.globe.enableLighting=false
@@ -331,6 +366,8 @@ onMounted(async()=>{
   // (viewer.value as Cesium.Viewer).imageryLayers.addImageryProvider(tdtVecLayer);
   //添加天地图注记图层
   (viewer.value as Cesium.Viewer).imageryLayers.addImageryProvider(tdtCvaLayer);
+
+
 
   createdom()
   try{
@@ -344,7 +381,6 @@ onMounted(async()=>{
     console.log("加载失败",err);
 
   }
-
 
   // 飞到指定位置
   (viewer.value as Cesium.Viewer).camera.flyTo({
@@ -373,8 +409,33 @@ defineExpose({
 </script>
 
 <style scoped>
-.map{
-  width: 100%;
-  height: 100%;
-}
+
+  .card {
+    position:absolute;
+    display: none;
+    z-index: 10;
+    text-align: center;
+    font-size: 15px;
+    background-color: rgb(246, 243, 243,0.8);
+  }
+  .card_toolsWindows{
+    top: 5px;
+    left:10%;
+    width: 10%;
+    height: 20%;
+  }
+  .card_toolsmodile{
+    top: 10%;
+    left: 2px;
+    width: 30%;
+    height: 15%;
+  }
+
+  .map{
+    width: 100%;
+    height: 100%;
+
+  }
+
+
 </style>

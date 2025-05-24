@@ -16,22 +16,15 @@
 <script setup lang='ts'>
 
   import { ref } from 'vue';
-import Top from './Bottom/index.vue';
+  import Top from './Bottom/index.vue';
   import Logo from './Top/Logo.vue';
   import Menu from './Top/Menu.vue';
+  import {deviceType} from '@/utils/calType'
   //hjuo
   let mode=ref<any>()
 
   // 计算宽高，用于判断设备类型
-  const deviceType=()=>{
-    if(window.innerWidth<768){
-      return 'mobile'
-    }
-    if(window.innerWidth<1024){
-      return 'tablet'
-    }
-    return 'desktop'
-  }
+
   mode.value=(deviceType()=='desktop'?'vertical':'horizontal')
   console.log(mode.value);
 
@@ -47,9 +40,11 @@ export default {
   display: flex;
   height: 100vh;
   width: 100%;
+  box-sizing: border-box;
   .Top {
     flex: 1;
     height: 100%;
+
     display: flex;
     flex-direction: column;
   }
@@ -64,6 +59,7 @@ export default {
   flex-direction: column;
   height: 100vh;
   width: 100%;
+  box-sizing: border-box;
   .TopMobile {
     flex: 1;
     display: flex;

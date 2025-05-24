@@ -7,9 +7,10 @@
           <img :src="item" alt="">
         </el-carousel-item>
       </el-carousel>
-    <hr class="hr">
+      <hr class="hr">
     </div>
-    <el-scrollbar height="90%" style="margin: auto; width: 90%;">
+    <!-- 卡片 -->
+    <el-scrollbar style="margin: auto; width: 90%; flex: 9;">
       <div class="scrollbar_demo">
         <div @click="cliskInfo(item)" v-for="item in PointInfo" :key="item.id" class="scrollbar_item" >
           <img :src="item.url" alt="">
@@ -22,7 +23,7 @@
   </div>
 
   <!-- 弹出框 -->
-  <el-dialog v-model="centerDialogVisible" title="Warning" width="500" center>
+  <el-dialog v-model="centerDialogVisible" title="Warning" style="width: 60%;" center>
     <template #header>
       <p>详细信息</p>
     </template>
@@ -89,6 +90,7 @@ onMounted(()=>{
   display: flex;
   flex-direction: column;
   gap: 20px;
+
 }
 .box {
   flex: 1;
@@ -117,6 +119,8 @@ onMounted(()=>{
   width: 90%;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   gap: 20px;
 

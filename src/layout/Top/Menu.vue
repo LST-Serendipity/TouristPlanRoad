@@ -53,6 +53,7 @@ const handleClick=(index:any)=>{
 }
 .menuhorizontal {
   flex: 15;
+
   display: flex;
   flex-direction: row;
   justify-content: center;
