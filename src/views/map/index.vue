@@ -4,6 +4,7 @@
       <span>路径规划</span>
       <el-input v-model="pointInfoDrawer.name" size="small" disabled style="margin: 5px 0;"></el-input>
       <el-button @click="planRoad" size="small">去这里</el-button>
+      <el-button @click="cancelPlan" size="small">取消</el-button>
     </el-card>
     <div class="map" ref="map">
     </div>
@@ -14,17 +15,20 @@
     <CesiumPoint v-if="viewer" :viewer="viewer"></CesiumPoint>
     <!-- 加载3dtileset -->
     <CesiumTileset v-if="viewer" :viewer="viewer"></CesiumTileset>
-    <!-- <el-drawer v-model="drawer" title="I am the title" :with-header="false">
-       <template #header>
-        <span>景点信息</span>
-       </template>
-       <template #default>
-        <div>
-          <span>景点名称：{{pointInfoDrawer.name}}</span>
-        </div>
-        <el-button @click="planRoad">去这里</el-button>
-       </template>
-    </el-drawer> -->
+    <el-card class="displayInfo" :style="`display: ${displayInfo};`">
+      <div class="head">
+        <span>景点名称: {{ pointInfoDrawer.name }}</span>
+      </div>
+      <div class="body">
+        <el-scrollbar height="400px">
+          <ul>
+            <li v-for="(item,index) in allImageArr" :key="index" @click="seeImagePoint(item)">
+              <el-image style="width: 100%; height: 100%" :src="item.url" fit="contain" />
+            </li>
+          </ul>
+      </el-scrollbar>
+      </div>
+    </el-card>
 
 </template>
 
@@ -35,6 +39,12 @@ import { Cartesian3,Terrain } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import {reqPlanRoad} from '@/api/LineInfo/index'
 import type {planRoadParmas} from '@/api/LineInfo/type'
+import {reqGetPointTakePicturePos,reqGetAllImage} from '@/api/PointInfo/index'
+import type {PicturePointResponse,responseAllImage,responseAllImageData} from '@/api/PointInfo/type'
+import useCesiumRoadStore from '@/stores/modules/cesiumRoad'
+import useCesiumPointStore from '@/stores/modules/csiumPoint'
+
+import type {pictureArrType} from '@/stores/modules/cesiumPointType'
 
 import CesiumRouter from './road/index.vue'
 import CesiumPoint from './point/index.vue'
@@ -47,6 +57,7 @@ import {deviceType} from '@/utils/calType'
 interface BuildingInfo {
   batchId: string
 }
+
 //密钥
 Cesium.Ion.defaultAccessToken =import.meta.env.VITE_CESIUM_KEY
 //实例化地图
@@ -63,8 +74,9 @@ const selectColor=ref<{
 })
 //弹窗元素
 let nameOverlay=ref<HTMLElement|null>(null)
-// 定义一个名为 drawer 的响应式变量，初始值为 false
-let drawer=ref<boolean>(false)
+const displayInfo=ref<string>('none')
+
+
 //存储点数据的信息弹窗
 let pointInfoDrawer=ref<{
   name:string,
@@ -79,6 +91,17 @@ let pointInfoDrawer=ref<{
 let planRoadLayer=ref()
 //地图路径规划卡片
 const cardDisabled=ref<string>('none')
+
+//定义路径仓库
+const useCesiumRoadstore=useCesiumRoadStore()
+//定义景点点的仓库
+const useCesiumPointstore=useCesiumPointStore()
+//储存对应景点的拍照打卡点位
+let picturePoint=ref<Cesium.GeoJsonDataSource|void>()
+//储存打卡机位的点
+let pictureArr=ref<pictureArrType[]>([])
+//储存景点所有打卡机位的图片或储存单个打卡点图片及其他要素
+let allImageArr=ref<responseAllImageData[]>()
 
 // 初始化cesium的viewer
 const initViewer=()=>{
@@ -135,30 +158,117 @@ const setupClickHandler=()=>{
   handler.setInputAction(async (click: Cesium.ScreenSpaceEventHandler.PositionedEvent)=>{
     //路径规划卡片隐藏
     cardDisabled.value='none'
+    displayInfo.value='none'
     const pickedFeature=(viewer.value as Cesium.Viewer).scene.pick(click.position)
     console.log("pickedFeature",pickedFeature);
     if(pickedFeature.id instanceof Cesium.Entity){
       console.log(pickedFeature.id.position);
       console.log(pickedFeature.id.polyline);
+
       //判断点击要素为景区点要素
       if(pickedFeature.id.position){
-        //路径规划卡片显示
-        cardDisabled.value='block'
-        console.log(pickedFeature.id.position._value);
-        //转换笛卡尔坐标为弧度
-        const Car3degree=Cesium.Cartographic.fromCartesian(pickedFeature.id.position._value)
-        console.log(Car3degree);
-        //转换弧度为经纬度
-        const lon=Cesium.Math.toDegrees(Car3degree.longitude)
-        const lat=Cesium.Math.toDegrees(Car3degree.latitude)
-        //储存经纬度
-        pointInfoDrawer.value.coordinates=[lon,lat]
-        drawer.value=true
-        //储存点击要素的name值
-        pointInfoDrawer.value.name=pickedFeature.id.name
+          //路径规划卡片显示
+          cardDisabled.value='block'
+          //详细信息显示
+          displayInfo.value='block'
+        //如果是景点
+        if(pickedFeature.id.properties.type&&pickedFeature.id.properties.type.getValue()==1){
+          // console.log(pickedFeature.id.properties.type.getValue());
+          // console.log(pickedFeature.id.id.split(".")[1]);
+          //获取景点id
+          let id=pickedFeature.id.id.split(".")[1]
+          //发送请求获取对应景点的打卡点位置
+          const resultPos:PicturePointResponse=await reqGetPointTakePicturePos(id)
+          // console.log(resultPos);
+          //发送请求获取对应景点的打卡图片
+          const resultImage:responseAllImage=await reqGetAllImage(id)
+          console.log(resultImage);
+
+          if(resultPos.code==200){
+            console.log(resultPos.data);
+            try{
+              // 防止重复多加载
+              if(picturePoint.value){
+                viewer.value?.dataSources.remove(picturePoint.value)
+              }
+              picturePoint.value=await Cesium.GeoJsonDataSource.load(resultPos.data,{
+                clampToGround:true,
+                fill:Cesium.Color.RED,
+
+              }).then((dataSource)=>{
+                viewer.value?.dataSources.add(dataSource)
+                dataSource.entities.values.forEach(entity=>{
+                  entity.billboard=new Cesium.BillboardGraphics({
+                    image:'public/takePicture.png',
+                    scale:0.6
+                  })
+                })
+                return dataSource
+              }).catch((err)=>{
+                console.log(err);
+
+              })
+              console.log(picturePoint.value);
+              // 获取属性值并储存
+              (picturePoint.value as Cesium.GeoJsonDataSource).entities.values.forEach((entity : any)=>{
+                pictureArr.value.push({
+                  name:entity.properties.name._value,
+                  id:entity.properties.id._value,
+                  parentid:entity.properties.parentid._value,
+                  position:entity.position._value
+                })
+              })
+              useCesiumPointstore.picturePoint=pictureArr.value
+              console.log(pictureArr.value);
+              if(resultImage.code==200){
+                useCesiumPointstore.allImagePointArr=resultImage.data
+                allImageArr.value=useCesiumPointstore.allImagePointArr
+              }
+
+            }catch(err){
+              console.log(err);
+
+            }
+          }
+
+
+          console.log(pickedFeature.id.position._value);
+          //转换笛卡尔坐标为弧度
+          const Car3degree=Cesium.Cartographic.fromCartesian(pickedFeature.id.position._value)
+          console.log(Car3degree);
+          //转换弧度为经纬度
+          const lon=Cesium.Math.toDegrees(Car3degree.longitude)
+          const lat=Cesium.Math.toDegrees(Car3degree.latitude)
+          //储存经纬度
+          pointInfoDrawer.value.coordinates=[lon,lat]
+
+          //储存点击要素的name值
+          console.log(pickedFeature.id.name);
+
+          pointInfoDrawer.value.name=pickedFeature.id.name
+          }
+        //如果是景点对应的打卡点
+        console.log(pickedFeature.id.properties.type.getValue());
+        if(pickedFeature.id.properties.type&&pickedFeature.id.properties.type.getValue()==2){
+          console.log(pickedFeature.id.properties.id.getValue());
+          if(allImageArr.value){
+
+            allImageArr.value=useCesiumPointstore.allImagePointArr.map((item:responseAllImageData)=>{
+              if(item.parentpositionid==pickedFeature.id.properties.id.getValue()){
+                return item
+              }
+            }).filter((element:responseAllImageData)=>{
+              return element!=undefined
+            })
+
+
+          }
+
+        }
 
       }
     }
+
     // 判断是否为 Cesium3DTileFeature
     console.log("判断是否为 Cesium3DTileFeature",pickedFeature instanceof Cesium.Cesium3DTileFeature);
     if (!Cesium.defined(pickedFeature)) {
@@ -183,7 +293,7 @@ const setupMouseMoveHandler=()=>{
   //监听 HTML canvas 上的各种屏幕空间事件，鼠标移动
   viewer.value.screenSpaceEventHandler.setInputAction((movement: any)=>{
     // 获取鼠标在屏幕上的位置对应的要素
-    const pickedFeature=viewer.value.scene.pick(movement.endPosition)
+    const pickedFeature=(viewer.value as Cesium.Viewer).scene.pick(movement.endPosition)
     // 判断是否为 Cesium3DTileFeature
     if(!Cesium.defined(pickedFeature)){
       // 不为Cesium3DTileFeature类型就隐藏浮层
@@ -227,7 +337,7 @@ const createdom=()=>{
   nameOverlay.value= document.createElement("div")
   console.log("nameOverlay.value",nameOverlay.value);
 
-  viewer.value.container.appendChild(nameOverlay.value); // 添加至Viewer容器
+  (viewer.value as Cesium.Viewer).container.appendChild(nameOverlay.value); // 添加至Viewer容器
   // 添加至Viewer容器
   nameOverlay.value.className = "backdrop";
   nameOverlay.value.style.display = "none";
@@ -306,7 +416,7 @@ const clearHeightBuilding=()=>{
   // 重置选中建筑信息
   selectedBuilding.value = null
 }
-//抽屉规划路线点击按钮回调
+//弹窗卡片规划路线点击按钮回调
 const planRoad=async()=>{
   if(pointInfoDrawer.value.coordinates){
     //发送请求获取路径
@@ -326,22 +436,42 @@ const planRoad=async()=>{
         viewer.value?.dataSources.remove(planRoadLayer.value)
       }
       console.log(result.data.planRoadGeoJSON);
+
+      //储存路径规划的线路节点经纬度
+      let roadLonLatArr:[number,number][]=[]
+      result.data.planRoadGeoJSON.features.forEach((i:any) => {
+        i.geometry.coordinates[0].forEach((item:[number,number]) =>{
+          roadLonLatArr.push(item)
+        })
+      });
+      //将路径规划的获取的线路点的经纬度储存仓库
+      useCesiumRoadstore.planroad=roadLonLatArr
+      console.log(roadLonLatArr);
+
+    // 计算方位角
+     let Azimuth= CalAzimuth(roadLonLatArr[0],roadLonLatArr[1])
+      console.log(Azimuth);
+
+
       try{
-        //加载获得的geojson数据
+        //加载获得的路径规划geojson数据
         planRoadLayer.value=await viewer.value?.dataSources.add(Cesium.GeoJsonDataSource.load(result.data.planRoadGeoJSON,{
           stroke:Cesium.Color.RED,
           strokeWidth:10,
           clampToGround:true,
-
         }))
+
+        console.log(planRoadLayer.value);
+        console.log(planRoadLayer.value._entityCollection._entities._array[0].position);
+
         viewer.value?.camera.flyTo({
-          destination:Cesium.Cartesian3.fromDegrees(params.startLon,params.endLat,500),
+          destination:Cesium.Cartesian3.fromDegrees(roadLonLatArr[0][0],roadLonLatArr[0][1],500),
+          orientation:{
+            heading:Cesium.Math.toRadians(Azimuth+180),
 
+          }
         })
-
         console.log("已规划路线");
-
-        drawer.value=false
 
       }catch(err){
         console.log(err);
@@ -352,6 +482,78 @@ const planRoad=async()=>{
   }
 
 }
+//弹窗卡片规划路径取消按钮点击回调
+const cancelPlan=()=>{
+  if(planRoadLayer.value){
+    viewer.value?.dataSources.remove(planRoadLayer.value)
+
+  }
+  if(picturePoint.value){
+    viewer.value?.dataSources.remove(picturePoint.value)
+  }
+  cardDisabled.value='none'
+  displayInfo.value='none'
+
+}
+
+//计算两点之间方位角
+const CalAzimuth=(currentPos:[number,number],nextNode:[number,number])=>{
+  // 将经纬度转换为弧度
+  let lon1=currentPos[0]*Math.PI/180
+  let lat1=currentPos[1]*Math.PI/180
+  let lon2=nextNode[0]*Math.PI/180
+  let lat2=nextNode[1]*Math.PI/180
+
+  // 计算经度差
+  let dLon=lon2-lon1
+
+  //使用正余弦公式计算方位角
+  let y= Math.sin(dLon)*Math.cos(lat2)
+  let x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon)
+
+  //使用atan2函数计算角度，将结果从弧度转为度
+  let bearing=Math.atan2(x,y)*180/Math.PI
+
+  // 将角度转换为0~360范围
+  return (bearing+360)%360
+}
+
+//抽屉弹窗点击回调事件
+const InfoRoad=()=>{
+
+}
+//右边弹窗图片点击回调
+const seeImagePoint=(item:responseAllImageData)=>{
+  console.log(item);
+  let position=useCesiumPointstore.picturePoint.find((element:pictureArrType)=>{
+    return element.id==item.parentpositionid
+  })
+  // console.log(position?.position);
+  //获取的笛卡尔坐标
+  let cartesian:Cesium.Cartesian3=position?.position
+  // 将笛卡尔坐标转换为地理坐标
+  const cartographic=Cesium.Cartographic.fromCartesian(cartesian)
+  //设置高度
+  const newHeight=500
+  const newCartographic=new Cesium.Cartographic(
+    cartographic.longitude,
+    cartographic.latitude,
+    newHeight
+  )
+  // 转回笛卡尔坐标并飞行
+  const newPosition = Cesium.Cartesian3.fromRadians(
+    newCartographic.longitude,
+    newCartographic.latitude,
+    newCartographic.height
+  );
+
+  viewer.value?.camera.flyTo({
+    destination:newPosition,
+    duration: 1
+  })
+
+}
+
 
 //组件挂载后加载地图
 onMounted(async()=>{
@@ -417,6 +619,9 @@ defineExpose({
     text-align: center;
     font-size: 15px;
     background-color: rgb(246, 243, 243,0.8);
+    button{
+      margin: auto;
+    }
   }
   .card_toolsWindows{
     top: 5px;
@@ -436,6 +641,30 @@ defineExpose({
     height: 100%;
 
   }
-
+  .displayInfo{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 20%;
+    height: 80%;
+    background-color: rgb(205, 234, 245,0.8);
+  }
+  .body{
+    ul{
+      width: 95%;
+      height: 80%;
+      margin: auto;
+      margin-top: 10px;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 5px;
+      li{
+        width: 45%;
+      }
+    }
+  }
 
 </style>

@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 const useCesiumRoadStore = defineStore("cesiumRoad",()=> {
-  let road=ref<any>()
+  let planroad=ref<[number,number][]>()
 
-  return { road }
+  return { planroad }
 })
 
 export default useCesiumRoadStore;
