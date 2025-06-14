@@ -44,20 +44,23 @@
           if(entity.name=='雷峰塔'){
             entity.billboard=new Cesium.BillboardGraphics({
               image:'public/lft.png',
-              scale:0.6
+              scale:0.6,
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
             })
 
           }
           else{
             entity.billboard=new Cesium.BillboardGraphics({
               image:'public/tubiao.png',
-              scale:0.5
+              scale:0.5,
+              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
             })
           }
           entity.label=new Cesium.LabelGraphics({
             text:entity.name,
             scale:0.8,
-            pixelOffset:new Cesium.Cartesian2(0,-30)
+            pixelOffset:new Cesium.Cartesian2(0,-30),
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
           })
 
 

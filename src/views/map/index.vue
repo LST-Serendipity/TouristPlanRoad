@@ -207,13 +207,16 @@ const setupClickHandler=()=>{
                 dataSource.entities.values.forEach(entity=>{
                   entity.billboard=new Cesium.BillboardGraphics({
                     image:'public/takePicture.png',
-                    scale:0.6
+                    scale:0.6,
+                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
                   }),
                   entity.label=new Cesium.LabelGraphics({
                     text:entity.name,
+                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                     fillColor:Cesium.Color.SKYBLUE,
                     scale:0.5,
-                    pixelOffset:new Cesium.Cartesian2(0,-30)
+                    pixelOffset:new Cesium.Cartesian2(0,-30),
+
                   })
                 })
                 return dataSource
@@ -505,7 +508,7 @@ const CalAzimuth=(currentPos:[number,number],nextNode:[number,number])=>{
 onMounted(async()=>{
   initViewer();
 
-  (viewer.value as Cesium.Viewer).scene.debugShowFramesPerSecond = true; // 显示 FPS
+  // (viewer.value as Cesium.Viewer).scene.debugShowFramesPerSecond = true; // 显示 FPS
   (viewer.value as Cesium.Viewer).scene.postProcessStages.fxaa.enabled = false; // 开启抗锯齿
   // viewer.value.scene.globe.enableLighting=false
   (viewer.value as Cesium.Viewer).resolutionScale = Math.min(1.0, window.devicePixelRatio);
