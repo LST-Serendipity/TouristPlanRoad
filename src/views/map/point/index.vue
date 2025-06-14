@@ -56,6 +56,7 @@
           }
           entity.label=new Cesium.LabelGraphics({
             text:entity.name,
+            scale:0.8,
             pixelOffset:new Cesium.Cartesian2(0,-30)
           })
 

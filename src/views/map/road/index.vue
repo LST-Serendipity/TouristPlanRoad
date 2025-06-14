@@ -76,9 +76,33 @@ const loadingRoadWfs=async()=>{
   const result=await reqGetRoadList(wfsParmas)
   console.log("result",result);
   try{
-    viewer.dataSources.add(Cesium.GeoJsonDataSource.load(result,{
+    Cesium.GeoJsonDataSource.load(result,{
       clampToGround: true,
-    }))
+      stroke:Cesium.Color.WHITE,
+      strokeWidth:4
+
+    }).then((dataSource)=>{
+      viewer.dataSources.add(dataSource)
+      const Entity=dataSource.entities.values
+      console.log(Entity[0]);
+
+      Entity.forEach(entity=>{
+        // 检查是否是线要素（关键步骤）
+        if (entity.polyline) {
+          // 修改现有属性而不是覆盖整个对象
+          entity.polyline.width = 5;  // 设置线宽
+
+          // 设置材质（颜色+边框）
+          entity.polyline.material = new Cesium.PolylineOutlineMaterialProperty({
+              color: Cesium.Color.WHITE,          // 主线颜色
+              outlineColor: Cesium.Color.BLACK, // 边框颜色
+              outlineWidth: 2                   // 边框宽度
+          });
+        }
+
+      })
+    })
+
   }catch(err){
     console.log("加载失败",err);
   }

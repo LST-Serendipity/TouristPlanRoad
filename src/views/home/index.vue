@@ -10,15 +10,20 @@
       <hr class="hr">
     </div>
     <!-- 卡片 -->
-    <el-scrollbar style="margin: auto; width: 90%; flex: 9;">
-      <div class="scrollbar_demo">
-        <div @click="cliskInfo(item)" v-for="item in PointInfo" :key="item.id" class="scrollbar_item" >
-          <img :src="item.url" alt="">
-          <span>{{ item.name }}</span>
+    <div  class="countainerButton">
+      <el-scrollbar style="margin: auto; width: 50%; flex: 1;">
+        <div class="scrollbar_demo">
+          <div @click="cliskInfo(item)" v-for="item in PointInfo" :key="item.id" class="scrollbar_item" >
+            <img :src="item.url" alt="">
+            <span>{{ item.name }}</span>
+          </div>
+
         </div>
+      </el-scrollbar>
+      <div class="boxright">
 
       </div>
-    </el-scrollbar>
+    </div>
 
   </div>
 
@@ -115,13 +120,21 @@ onMounted(()=>{
 
   box-shadow: 0px 1px 10px rgb(142, 141, 141);
 }
-.scrollbar_demo{
-  width: 90%;
+.countainerButton{
+  flex: 2;
+  overflow-y: auto;
   display: flex;
+  flex-direction: row;
+  padding: 5px;
+  gap: 5px;
+}
+.scrollbar_demo{
+
+  display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  width: 100%;
   gap: 20px;
 
 }
@@ -147,10 +160,6 @@ onMounted(()=>{
     height: 10%;
     margin-bottom: 2px;
   }
-
-
-
-
 }
 .scrollbar_item:hover{
   cursor: pointer;
@@ -171,6 +180,10 @@ onMounted(()=>{
 
 .el-carousel__item:nth-child(2n + 1) {
   background-color: #d3dce6;
+}
+
+.boxright{
+  flex: 1;
 }
 
 </style>

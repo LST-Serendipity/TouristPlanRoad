@@ -18,6 +18,12 @@ export interface PointTouristInfoResponseData extends PointTouristInfoResponse  
   data: PointTouristInfo[]
 }
 
+// 获取景点点位的请求返回数据类型
+export interface PointInfoGeoResponse extends PointTouristInfoResponse{
+  data:Cesium.GeoJsonDataSource
+}
+
+
 //返回对应景点打卡点位数据类型
 export interface PicturePointResponse extends PointTouristInfoResponse{
   data:Cesium.GeoJsonDataSource
