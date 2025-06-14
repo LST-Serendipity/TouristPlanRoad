@@ -1,24 +1,32 @@
-# tourist3D
+# 西湖旅游景点导览系统-前端内容
 
-This template should help get you started developing with Vue 3 in Vite.
+## 主要内容
+- 实现西湖范围内的路径规划
+- 实现西湖景点预览及景点图片预览
+- 实现西湖景点打卡点位置预览及图片预览
+<br>
+<hr>
+<br>
+## 操作预览
+查看景点信息
 
-## Recommended IDE Setup
+- ![6月14日](https://github.com/user-attachments/assets/b0c17d61-856c-4094-877e-1362e7321cd5)
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+查看打卡点信息及位置
 
-## Type Support for `.vue` Imports in TS
+- ![6月14日(3)](https://github.com/user-attachments/assets/f0b48552-abf2-48aa-9abb-e36bbb215a5f)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+进行路径规划
 
-## Customize configuration
+- ![6月14日(2)](https://github.com/user-attachments/assets/d430de2a-9597-4c26-8c00-de5626d588e5)
 
-See [Vite Configuration Reference](https://vite.dev/config/).
 
-## Project Setup
+  
 
-```sh
-npm install
-```
+
+
+
+
 
 ### Compile and Hot-Reload for Development
 
@@ -26,36 +34,3 @@ npm install
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Run Unit Tests with [Vitest](https://vitest.dev/)
-
-```sh
-npm run test:unit
-```
-
-### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
-
-```sh
-npm run test:e2e:dev
-```
-
-This runs the end-to-end tests against the Vite development server.
-It is much faster than the production build.
-
-But it's still recommended to test the production build with `test:e2e` before deploying (e.g. in CI environments):
-
-```sh
-npm run build
-npm run test:e2e
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
